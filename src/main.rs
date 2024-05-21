@@ -7,7 +7,7 @@ fn main() {
     let mut ntru_decrypt = ntru_decrypt::NtruDecrypt::new();
     let mut ntru_util = ntru_util::Initializer::new();
     ntru_util.gen_keys();
-    let message = "Hello, World!".to_string();
+    let message = "010001001".to_string();
     ntru_encrypt.encrypt(message);
     println!("Ciphertext: {}", ntru_encrypt.ciphertext.clone());
     ntru_decrypt.decrypt(ntru_encrypt.ciphertext.clone());

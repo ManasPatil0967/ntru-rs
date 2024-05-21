@@ -1,4 +1,4 @@
-use crate::ntru_util::{bits_to_str, gen_rand, poly_euclid_inv, string_to_array, Initializer, Polynomial};
+use crate::ntru_util::{bits_to_str, string_to_array, Initializer, Polynomial};
 pub struct NtruDecrypt {
     pub p: i64,
     pub q: i64,

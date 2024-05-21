@@ -192,18 +192,22 @@ impl Polynomial {
     pub fn divide(&self, other: &Self) -> (Self, Self) {
         let mut quo = Polynomial::zero();
         let mut rem = self.clone();
-        let mut curr = rem.degree(); // Store the current degree in a mutable variable
-    
+        let mut curr = rem.degree();
+
         while curr >= other.degree() {
+            if rem.coeffs[curr] == 0 {
+                curr -= 1;
+                continue;
+            }
             let lc_quo = rem.coeffs[curr];
             let lc_rem = rem.coeffs[curr - other.degree() + 1];
             let lead_term = lc_quo / lc_rem;
-    
+
             quo.coeffs.push(lead_term);
             rem.coeffs = rem.coeffs[..curr - other.degree()].iter().map(|&c| c - lead_term * other.coeffs[0]).collect::<Vec<_>>();
-            curr -= other.degree(); // Modify the mutable variable instead
+            curr -= other.degree();
         }
-    
+
         (quo, rem)
     }
 
