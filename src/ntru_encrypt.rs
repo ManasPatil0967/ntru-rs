@@ -1,26 +1,26 @@
 use crate::ntru_util::{gen_rand, pad_arr, string_to_array, Initializer, Polynomial};
 pub struct NtruEncrypt {
-    p: i64,
-    q: i64,
-    N: i64,
-    df: i64,
-    dg: i64,
-    dr: i64,
-    f: Polynomial,
-    g: Polynomial,
-    h: Polynomial,
-    fp: Polynomial,
-    fq: Polynomial,
-    I: Polynomial,
-    r: Polynomial,
-    message: String,
-    cipherpoly: Polynomial,
-    ciphertext: String,
+    pub p: i64,
+    pub q: i64,
+    pub N: i64,
+    pub df: i64,
+    pub dg: i64,
+    pub dr: i64,
+    pub f: Polynomial,
+    pub g: Polynomial,
+    pub h: Polynomial,
+    pub fp: Polynomial,
+    pub fq: Polynomial,
+    pub I: Polynomial,
+    pub r: Polynomial,
+    pub message: String,
+    pub cipherpoly: Polynomial,
+    pub ciphertext: String,
 }
 
 impl NtruEncrypt {
     // Constructor
-    fn new() -> NtruEncrypt {
+    pub fn new() -> NtruEncrypt {
         let init = Initializer::new();
         NtruEncrypt {
             p: init.p,

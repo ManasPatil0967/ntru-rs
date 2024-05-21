@@ -111,7 +111,7 @@ fn extended_gcd(a: i64, b: i64) -> (i64, i64, i64) {
 
 #[derive(PartialEq)]
 pub struct Polynomial {
-    coeffs: Vec<i64>, // Coefficients of the polynomial
+    pub coeffs: Vec<i64>, // Coefficients of the polynomial
 }
 
 impl Polynomial {
