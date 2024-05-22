@@ -45,7 +45,11 @@ pub fn array_to_string(arr: &Vec<i64>) -> String {
 }
 
 pub fn string_to_array(s: &str) -> Vec<i64> {
-    s.split(", ").map(|x| i64::from_str(x).unwrap()).collect()
+    let mut arr = Vec::new();
+    for num in s.split("") {
+        arr.push(i64::from_str(num).unwrap());
+    }
+    arr
 }
 
 pub fn str_to_bits(s: &str) -> Vec<i64> {
@@ -140,9 +144,9 @@ impl Polynomial {
     }
 
     pub fn create_I() -> Self {
-        let mut I = vec![0; 762 as usize];
+        let mut I = vec![0; 108 as usize];
         I[0] = -1;
-        I[761] = 1;
+        I[107] = 1;
         Polynomial::new(I)
     }
 
@@ -240,6 +244,94 @@ impl Polynomial {
     }
 }
 
+fn ntruprime_inv_poly(a: &Polynomial, modulus: u16) -> Option<Polynomial> {
+    let n = a.degree() + 1;
+    let mut b = Polynomial::zero(); // Corresponds to NtruIntPoly *b
+    b.coeffs[0] = 1;
+    let mut c = Polynomial::zero(); // Corresponds to NtruIntPoly *c
+
+    let mut f = a.clone(); // Corresponds to NtruIntPoly *f
+    f.pad(n as i64); // Ensure f has enough coefficients
+
+    let mut g = Polynomial::create_I(); // Corresponds to NtruIntPoly *g
+    g.coeffs[0] = modulus as i64 - 1;
+    g.coeffs[1] = modulus as i64 - 1;
+
+    let mut k = 0;
+
+    loop {
+        while f.is_zero() || f.coeffs[0] == 0 {
+            f.coeffs.rotate_left(1); 
+            c.coeffs.rotate_right(1); 
+            k += 1;
+            if f.is_zero() {
+                return None;
+            }
+        }
+
+        if f.degree() == 0 {
+            let f0_inv_option = modular_inverse(f.coeffs[0], modulus as i64);
+            match f0_inv_option {
+                Some(f0_inv) => {
+                    let b_times_f0_inv = b.multiply_scalar(f0_inv);
+                    let mod_poly = Polynomial::new(vec![modulus as i64, 1]);
+                    let mut inv = b_times_f0_inv.modulus(&mod_poly); 
+                    for _ in 0..k {
+                        inv.coeffs.rotate_right(1); 
+                    }
+                    return Some(inv);
+                },
+                None => return None,
+            }
+        }
+
+        if f.degree() < g.degree() {
+            std::mem::swap(&mut f, &mut g);
+            std::mem::swap(&mut b, &mut c);
+        }
+
+        let g0_inv_option = modular_inverse(g.coeffs[0], modulus as i64);
+        match g0_inv_option {
+            Some(g0_inv) => {
+                let u = ((f.coeffs[0] as u64 * g0_inv as u64) % (modulus as u64)) as i64;
+                f.subtract(&g.multiply_scalar(u));
+                b.subtract(&c.multiply_scalar(u));
+            },
+            None => return None,
+        }
+    }
+}
+
+// Helper function to compute the modular inverse
+fn modular_inverse(a: i64, m: i64) -> Option<i64> {
+    let mut mn = (m, 0);
+    let mut a = a;
+    let mut m = m;
+
+    let mut xy = (0, 1);
+
+    while m > 0 {
+        let q = a / m;
+        let r = a % m;
+        a = m;
+        m = r;
+        let t = mn.0 - q * mn.1;
+        mn = (mn.1, t);
+        let t = xy.0 - q * xy.1;
+        xy = (xy.1, t);
+    }
+
+    if xy.0 < 0 {
+        xy.0 += m;
+    }
+
+    if xy.0!= 1 {
+        None
+    } else {
+        Some(xy.0)
+    }
+}
+
 pub fn poly_euclid_inv(f: &Polynomial, g: &Polynomial, n: i64) -> Polynomial {
     let mut x0 = Polynomial::one(); // Represents 1
     let mut x1 = Polynomial::zero();
@@ -288,16 +380,16 @@ impl Initializer {
     pub fn new () -> Self {
         Initializer {
             p: 3,
-            q: 256,
-            N: 761,
-            df: 61,
-            dg: 20,
-            dr: 18,
-            f: Polynomial::new(vec![0; 761 as usize]),
-            g: Polynomial::new(vec![0; 761 as usize]),
-            h: Polynomial::new(vec![0; 761 as usize]),
-            fp: Polynomial::new(vec![0; 761 as usize]),
-            fq: Polynomial::new(vec![0; 761 as usize]),
+            q: 64,
+            N: 107,
+            df: 15,
+            dg: 12,
+            dr: 5,
+            f: Polynomial::new(vec![0; 107 as usize]),
+            g: Polynomial::new(vec![0; 107 as usize]),
+            h: Polynomial::new(vec![0; 107 as usize]),
+            fp: Polynomial::new(vec![0; 107 as usize]),
+            fq: Polynomial::new(vec![0; 107 as usize]),
             I: Polynomial::create_I(),
         }
     }
@@ -307,15 +399,24 @@ impl Initializer {
         self.f = gen_rand(self.N, self.df, self.df - 1);
         self.g = gen_rand(self.N, self.dg, self.dg);
         let zero = Polynomial::new(vec![0; self.N as usize]);
+    
         while max_tries > 0 {
-            let fp_temp = poly_euclid_inv(&self.f, &self.I, self.p);
-            let fq_temp = poly_euclid_inv(&self.f, &self.I, self.q);
-            if fp_temp != zero && fq_temp != zero {
-                self.fp = fp_temp.clone();
-                self.fq = fq_temp.clone();
+            // Assuming self.p and self.q are u16 values compatible with ntruprime_inv_poly
+            let fp_temp_opt = ntruprime_inv_poly(&self.f, self.p as u16);
+            let fq_temp_opt = ntruprime_inv_poly(&self.f, self.q as u16);
+    
+            if let (Some(fp_temp), Some(fq_temp)) = (fp_temp_opt, fq_temp_opt) {
+                if fp_temp!= zero || fq_temp!= zero {
+                    self.fp = fp_temp;
+                    self.fq = fq_temp;
+                    break;
+                }
+                else {
+                    max_tries -= 1;
+                }
             }
-            
-            if !self.I.is_zero() {
+    
+            if!self.I.is_zero() {
                 break;
             }
             max_tries -= 1;
@@ -381,13 +482,27 @@ impl Initializer {
         self.fp.coeffs = lines[8].split_whitespace().map(|x| i64::from_str(x).unwrap()).collect();
         self.fq.coeffs = lines[9].split_whitespace().map(|x| i64::from_str(x).unwrap()).collect();
         self.g.coeffs = lines[10].split_whitespace().map(|x| i64::from_str(x).unwrap()).collect();
+        println!("f: {:?}", self.f.coeffs);
+        println!("fp: {:?}", self.fp.coeffs);
+        println!("fq: {:?}", self.fq.coeffs);
+        println!("g: {:?}", self.g.coeffs);
         Ok(())
     }
 
     pub fn gen_keys(&mut self) {
         self.gen_fg();
         self.gen_h();
-        self.write_pubkey("pubkey.pub").unwrap();
-        self.write_privkey("privkey.priv").unwrap();
+        // If pubkey.pub and privley.priv exist, then use read_pubkey and read_privkey
+        // Otherwise, use write_pubkey and write_privkey
+        if (std::path::Path::new("pubkey.pub").exists() && std::path::Path::new("privkey.priv").exists()) {
+            println!("Reading keys from files");
+            self.read_pubkey("pubkey").unwrap();
+            self.read_privkey("privkey").unwrap();
+        }
+        else {
+            println!("Writing keys to files");
+            self.write_pubkey("pubkey").unwrap();
+            self.write_privkey("privkey").unwrap();
+        }
     }
 }

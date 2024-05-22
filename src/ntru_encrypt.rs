@@ -50,6 +50,7 @@ impl NtruEncrypt {
         self.message = message;
         self.gen_r();
         let m_len = self.message.len();
+        println!("Message: {}", &self.message);
         let mut bM = pad_arr(&string_to_array(&self.message), self.N);
         let mut m = Polynomial::new(bM);
         let mut binding = self.r.multiply(&self.h);
