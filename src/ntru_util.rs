@@ -45,11 +45,9 @@ pub fn array_to_string(arr: &Vec<i64>) -> String {
 }
 
 pub fn string_to_array(s: &str) -> Vec<i64> {
-    let mut arr = Vec::new();
-    for num in s.split("") {
-        arr.push(i64::from_str(num).unwrap());
-    }
-    arr
+    s.chars()
+    .map(|c| c.to_digit(10).unwrap() as i64)
+    .collect()
 }
 
 pub fn str_to_bits(s: &str) -> Vec<i64> {
@@ -198,7 +196,7 @@ impl Polynomial {
         let mut rem = self.clone();
         let mut curr = rem.degree();
 
-        while curr >= other.degree() {
+        while curr >= other.degree() + 1{
             if rem.coeffs[curr] == 0 {
                 curr -= 1;
                 continue;
@@ -444,15 +442,31 @@ impl Initializer {
 
     pub fn read_pubkey(&mut self, filename: &str) -> std::io::Result<()> {
         let filename = format!("{}.pub", filename);
-        let contents = fs::read_to_string(filename)?;
+        let mut contents = String::new();
+        fs::read_to_string(filename)?.lines().for_each(|line| {
+            contents.push_str(line.trim());
+            contents.push('\n');
+        });
+
         let lines: Vec<&str> = contents.lines().collect();
+
+        // Assuming the first four lines contain the values p, q, N, and d
         self.p = i64::from_str(lines[0].split_whitespace().last().unwrap()).unwrap();
         self.q = i64::from_str(lines[1].split_whitespace().last().unwrap()).unwrap();
         self.N = i64::from_str(lines[2].split_whitespace().last().unwrap()).unwrap();
         self.dr = i64::from_str(lines[3].split_whitespace().last().unwrap()).unwrap();
-        self.h.coeffs = lines[4].split_whitespace().skip(3).map(|x| i64::from_str(x).unwrap()).collect();
+
+        // Parsing the coefficients of h
+        // let h_coeffs_line: &str = lines[4];
+        let h_coeffs: Vec<i64> = lines[4].split_whitespace().skip(2).map(|x| i64::from_str(x).unwrap()).collect();
+
+        self.h.coeffs = h_coeffs;
+
+        println!("h: {:?}", self.h.coeffs);
+
         Ok(())
     }
+
 
     pub fn write_privkey(&self, filename: &str) -> std::io::Result<()> {
         let filename = format!("{}.priv", filename);
@@ -482,10 +496,10 @@ impl Initializer {
         self.fp.coeffs = lines[8].split_whitespace().map(|x| i64::from_str(x).unwrap()).collect();
         self.fq.coeffs = lines[9].split_whitespace().map(|x| i64::from_str(x).unwrap()).collect();
         self.g.coeffs = lines[10].split_whitespace().map(|x| i64::from_str(x).unwrap()).collect();
-        println!("f: {:?}", self.f.coeffs);
-        println!("fp: {:?}", self.fp.coeffs);
-        println!("fq: {:?}", self.fq.coeffs);
-        println!("g: {:?}", self.g.coeffs);
+        // println!("f: {:?}", self.f.coeffs);
+        // println!("fp: {:?}", self.fp.coeffs);
+        // println!("fq: {:?}", self.fq.coeffs);
+        // println!("g: {:?}", self.g.coeffs);
         Ok(())
     }
 

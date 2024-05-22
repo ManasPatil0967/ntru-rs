@@ -40,13 +40,17 @@ impl NtruDecrypt {
 
     pub fn decrypt(&mut self, input: String) {
         self.input = input;
+        println!("Ciphertext in Decrypt: {}", self.input.clone());
         let c = Polynomial::new(string_to_array(&self.input));
+        println!("Ciphertext in Decrypt: {:?}", c.coeffs.clone());
         let cf = c.modulus(&self.fq);
         let mut m = cf.multiply(&self.fp);
         let mut mf = m.reduce_coeffs(self.p.into());
         let mut binding = mf.modulus(&self.I);
         mf = binding.reduce_coeffs(self.p.into());
+        println!("Decrypted mf: {:?}", mf.coeffs.clone());
         self.output = bits_to_str(&mf.coeffs.clone().into_iter().map(|x| x as u8).collect::<Vec<u8>>());
+        println!("Decrypted: {}", self.output.clone());
     }
 
 
