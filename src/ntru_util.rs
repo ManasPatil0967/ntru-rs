@@ -45,9 +45,7 @@ pub fn array_to_string(arr: &Vec<i64>) -> String {
 }
 
 pub fn string_to_array(s: &str) -> Vec<i64> {
-    s.chars()
-    .map(|c| c.to_digit(10).unwrap() as i64)
-    .collect()
+    s.split(" ").map(|x| i64::from_str(x).unwrap()).collect()
 }
 
 pub fn str_to_bits(s: &str) -> Vec<i64> {

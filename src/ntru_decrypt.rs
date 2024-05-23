@@ -44,8 +44,11 @@ impl NtruDecrypt {
         let c = Polynomial::new(string_to_array(&self.input));
         println!("Ciphertext in Decrypt: {:?}", c.coeffs.clone());
         let cf = c.modulus(&self.fq);
+        println!("Decrypted cf: {:?}", cf.coeffs.clone());
         let mut m = cf.multiply(&self.fp);
+        println!("Decrypted m: {:?}", m.coeffs.clone());
         let mut mf = m.reduce_coeffs(self.p.into());
+        println!("Decrypted mf: {:?}", mf.coeffs.clone());
         let mut binding = mf.modulus(&self.I);
         mf = binding.reduce_coeffs(self.p.into());
         println!("Decrypted mf: {:?}", mf.coeffs.clone());

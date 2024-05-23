@@ -8,7 +8,7 @@ fn main() {
     let mut ntru_encrypt = ntru_encrypt::NtruEncrypt::new();
     // println!("h in main: {:?}", ntru_encrypt.h.coeffs.clone());
     let mut ntru_decrypt = ntru_decrypt::NtruDecrypt::new();
-    let message = "010001001".to_string();
+    let message = "0 1 0 0 0 1 0 0 1".to_string();
     ntru_encrypt.encrypt(message);
     println!("Ciphertext: {}", ntru_encrypt.ciphertext.clone());
     ntru_decrypt.decrypt(ntru_encrypt.ciphertext.clone());
