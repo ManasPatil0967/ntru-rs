@@ -191,27 +191,67 @@ impl Polynomial {
         Polynomial { coeffs }
     }
 
+    // pub fn divide(&self, other: &Self) -> (Self, Self) {
+    //     let mut quo = Polynomial::zero();
+    //     let mut rem = self.clone();
+    //     let mut curr = rem.degree();
+
+    //     while curr >= other.degree() {
+    //         if rem.coeffs[curr] == 0 {
+    //             curr -= 1;
+    //             continue;
+    //         }
+    //         let lc_quo = rem.coeffs[curr];
+    //         let lc_rem = rem.coeffs[curr - other.degree() + 1];
+    //         let lead_term = lc_quo / lc_rem;
+
+    //         quo.coeffs.push(lead_term);
+    //         rem.coeffs = rem.coeffs[..curr - other.degree()].iter().map(|&c| c - lead_term * other.coeffs[0]).collect::<Vec<_>>();
+    //         curr -= other.degree();
+    //     }
+
+    //     (quo, rem)
+    // }
+
     pub fn divide(&self, other: &Self) -> (Self, Self) {
         let mut quo = Polynomial::zero();
         let mut rem = self.clone();
         let mut curr = rem.degree();
-
-        while curr >= other.degree() + 1{
+    
+        while curr >= other.degree() {
             if rem.coeffs[curr] == 0 {
                 curr -= 1;
                 continue;
             }
             let lc_quo = rem.coeffs[curr];
-            let lc_rem = rem.coeffs[curr - other.degree() + 1];
+            let lc_rem = if curr - other.degree() + 1 < rem.coeffs.len() {
+                rem.coeffs[curr - other.degree() + 1]
+            } else {
+                0
+            };
             let lead_term = lc_quo / lc_rem;
-
+    
             quo.coeffs.push(lead_term);
-            rem.coeffs = rem.coeffs[..curr - other.degree()].iter().map(|&c| c - lead_term * other.coeffs[0]).collect::<Vec<_>>();
+            
+            // Ensure we don't go out of bounds
+            let start_index = curr.saturating_sub(other.degree());
+            let end_index = curr + 1;
+            let slice_len = end_index - start_index;
+            let mut new_coeffs = vec![0; slice_len];
+    
+            for i in 0..slice_len {
+                new_coeffs[i] = rem.coeffs[start_index + i] - lead_term * other.coeffs.get(i).unwrap_or(&0);
+            }
+    
+            rem.coeffs.truncate(start_index);
+            rem.coeffs.extend(new_coeffs.into_iter());
+    
             curr -= other.degree();
         }
-
+    
         (quo, rem)
     }
+    
 
     pub fn reduce_coeffs(&mut self, n: i64) -> &mut Self{
         for coeff in &mut self.coeffs {
@@ -225,6 +265,7 @@ impl Polynomial {
     }
 
     pub fn modulus(&self, other: &Self) -> Self {
+        println!("Divide used in modulus");
         let (_, rem) = self.divide(other);
         rem
     }
@@ -462,7 +503,7 @@ impl Initializer {
 
         self.h.coeffs = h_coeffs;
 
-        println!("h: {:?}", self.h.coeffs);
+        // println!("h: {:?}", self.h.coeffs);
 
         Ok(())
     }
@@ -508,8 +549,8 @@ impl Initializer {
         self.gen_h();
         // If pubkey.pub and privley.priv exist, then use read_pubkey and read_privkey
         // Otherwise, use write_pubkey and write_privkey
-        if (std::path::Path::new("pubkey.pub").exists() && std::path::Path::new("privkey.priv").exists()) {
-            println!("Reading keys from files");
+        if std::path::Path::new("pubkey.pub").exists() && std::path::Path::new("privkey.priv").exists() {
+            // println!("Reading keys from files");
             self.read_pubkey("pubkey").unwrap();
             self.read_privkey("privkey").unwrap();
         }

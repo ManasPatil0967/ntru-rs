@@ -46,16 +46,16 @@ impl NtruEncrypt {
 
     pub fn gen_r(&mut self) {
         self.r = gen_rand(self.N, self.dr, self.dr);
-        println!("r: {:?}", self.r.coeffs.clone());
+        // println!("r: {:?}", self.r.coeffs.clone());
     }
 
     pub fn encrypt(&mut self, message: String) {
         self.message = message;
         self.gen_r();
         // let m_len = self.message.len();
-        println!("Message: {}", &self.message);
+        // println!("Message: {}", &self.message);
         let bM = pad_arr(&string_to_array(&self.message), self.N);
-        println!("bM: {:?}", bM);
+        // println!("bM: {:?}", bM);
         let m = Polynomial::new(bM);
         let mut binding = self.r.multiply(&self.h);
         let rh = binding.reduce_coeffs(self.q);
@@ -66,7 +66,8 @@ impl NtruEncrypt {
         let mut binding = e.modulus(&self.I);
         e = binding.reduce_coeffs(self.q);
         e.pad(self.N);
-        self.ciphertext = e.coeffs.iter().map(|x| x.to_string()).collect::<String>();
+        // Add a space between each element in the array
+        self.ciphertext = e.coeffs.clone().into_iter().map(|x| x.to_string()).collect::<Vec<String>>().join(" ");
         // println!("Ciphertext: {}", self.ciphertext.clone());
         self.cipherpoly = e.clone();
     }
