@@ -20,26 +20,25 @@ pub struct NtruEncrypt {
 
 impl NtruEncrypt {
     // Constructor
-    pub fn new() -> NtruEncrypt {
-        let mut init = Initializer::new();
-        init.gen_keys();
+    pub fn new(p: i64, q: i64, N: i64, df:i64, dg:i64, dr:i64, f:Polynomial, g:Polynomial, h:Polynomial, fp:Polynomial, 
+               fq: Polynomial, I:Polynomial) -> NtruEncrypt {
         // println!("h in encrypt: {:?}", init.h.coeffs.clone());
         NtruEncrypt {
-            p: init.p,
-            q: init.q,
-            N: init.N,
-            df: init.df,
-            dg: init.dg,
-            dr: init.dr,
-            f: init.f,
-            g: init.g,
-            h: init.h,
-            fp: init.fp,
-            fq: init.fq,
-            I: init.I,
-            r: Polynomial::new(vec![0; init.N as usize]),
+            p,
+            q,
+            N,
+            df,
+            dg,
+            dr,
+            f,
+            g,
+            h,
+            fp,
+            fq,
+            I,
+            r: Polynomial::new(vec![0; N as usize]),
             message: String::new(),
-            cipherpoly: Polynomial::new(vec![0; init.N as usize]),
+            cipherpoly: Polynomial::new(vec![0; N as usize]),
             ciphertext: String::new(),
         }
     }
