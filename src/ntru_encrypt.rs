@@ -1,27 +1,27 @@
-use crate::ntru_util::{gen_rand, pad_arr, string_to_array, Initializer, Polynomial};
-pub struct NtruEncrypt {
-    pub p: i64,
-    pub q: i64,
-    pub N: i64,
-    pub df: i64,
+use crate::ntru_util::{pad_arr, string_to_array, Initializer, Polynomial, Field};
+pub struct NtruEncrypt<T: Field> {
+    pub p: T,
+    pub q: T,
+    pub N: T,
+    pub df: T,
     pub dg: i64,
     pub dr: i64,
-    pub f: Polynomial,
-    pub g: Polynomial,
-    pub h: Polynomial,
-    pub fp: Polynomial,
-    pub fq: Polynomial,
-    pub I: Polynomial,
-    pub r: Polynomial,
+    pub f: Polynomial<T>,
+    pub g: Polynomial<T>,
+    pub h: Polynomial<T>,
+    pub fp: Polynomial<T>,
+    pub fq: Polynomial<T>,
+    pub I: Polynomial<T>,
+    pub r: Polynomial<T>,
     pub message: String,
-    pub cipherpoly: Polynomial,
+    pub cipherpoly: Polynomial<T>,
     pub ciphertext: String,
 }
 
-impl NtruEncrypt {
+impl<T: Field> NtruEncrypt<T> {
     // Constructor
-    pub fn new(p: i64, q: i64, N: i64, df:i64, dg:i64, dr:i64, f:Polynomial, g:Polynomial, h:Polynomial, fp:Polynomial, 
-               fq: Polynomial, I:Polynomial) -> NtruEncrypt {
+    pub fn new(p: i64, q: i64, N: i64, df:i64, dg:i64, dr:i64, f:Polynomial<T>, g:Polynomial<T>, h:Polynomial<T>, fp:Polynomial<T>, 
+               fq: Polynomial<T>, I:Polynomial<T>) -> NtruEncrypt<T> {
         // println!("h in encrypt: {:?}", init.h.coeffs.clone());
         NtruEncrypt {
             p,
@@ -44,7 +44,8 @@ impl NtruEncrypt {
     }
 
     pub fn gen_r(&mut self) {
-        self.r = gen_rand(self.N, self.dr, self.dr);
+        let init = Initializer::new();
+        self.r = init.gen_rand(self.N, self.dr, self.dr);
         // println!("r: {:?}", self.r.coeffs.clone());
     }
 

@@ -1,24 +1,24 @@
-use crate::ntru_util::{bits_to_str, string_to_array, Initializer, Polynomial};
-pub struct NtruDecrypt {
+use crate::ntru_util::{bits_to_str, string_to_array, Initializer, Polynomial, Field};
+pub struct NtruDecrypt<T: Field> {
     pub p: i64,
     pub q: i64,
     pub N: i64,
     pub df: i64,
     pub dg: i64,
     pub dr: i64,
-    pub f: Polynomial,
-    pub g: Polynomial,
-    pub h: Polynomial,
-    pub fp: Polynomial,
-    pub fq: Polynomial,
-    pub I: Polynomial,
+    pub f: Polynomial<T>,
+    pub g: Polynomial<T>,
+    pub h: Polynomial<T>,
+    pub fp: Polynomial<T>,
+    pub fq: Polynomial<T>,
+    pub I: Polynomial<T>,
     pub input: String,
     pub output: String,
 }
 
-impl NtruDecrypt {
+impl<T: Field> NtruDecrypt<T> {
     // Constructor
-    pub fn new() -> NtruDecrypt {
+    pub fn new() -> NtruDecrypt<T> {
         let init = Initializer::new();
         NtruDecrypt {
             p: init.p,

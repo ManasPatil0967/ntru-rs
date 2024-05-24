@@ -1,5 +1,5 @@
 use std::{vec, fs, str::FromStr};
-
+use std::ops::{Add, Mul, Div, Sub};
 use rand::seq::SliceRandom;
 
 pub fn check_prime(n: i64) -> bool {
@@ -109,13 +109,26 @@ fn extended_gcd(a: i64, b: i64) -> (i64, i64, i64) {
     }
 }
 
-#[derive(PartialEq)]
-pub struct Polynomial {
-    pub coeffs: Vec<i64>, // Coefficients of the polynomial
+
+// Trait for implementing field operations
+pub trait Field: Sized + Copy + Add<Output = Self> + Mul<Output = Self> + Div<Output = Self> + Sub<Output = Self> {
+    fn zero() -> Self;
+    fn one() -> Self;
 }
 
-impl Polynomial {
-    pub fn new(coeffs: Vec<i64>) -> Self {
+// Implementation for f64 as an example
+impl Field for i64 {
+    fn zero() -> Self { 0 }
+    fn one() -> Self { 1 }
+}
+
+#[derive(PartialEq)]
+pub struct Polynomial<T: Field> {
+    pub coeffs: Vec<T>, // Coefficients of the polynomial
+}
+
+impl<T: Field> Polynomial<T> {
+    pub fn new(coeffs: Vec<T>) -> Self {
         Polynomial { coeffs }
     }
 
@@ -189,100 +202,24 @@ impl Polynomial {
         Polynomial { coeffs }
     }
 
-    // pub fn divide(&self, other: &Self) -> (Self, Self) {
-    //     let mut quo = Polynomial::zero();
-    //     let mut rem = self.clone();
-    //     let mut curr = rem.degree();
+    pub fn divide<'a>(&'a self, other: &'a Polynomial<T>) -> (Polynomial<T>, Polynomial<T>) {
+        let mut q_coeffs = vec![T::zero(); self.degree() - other.degree() + 1];
+        let mut r_coeffs = self.coeffs.clone();
 
-    //     while curr >= other.degree() {
-    //         if rem.coeffs[curr] == 0 {
-    //             curr -= 1;
-    //             continue;
-    //         }
-    //         let lc_quo = rem.coeffs[curr];
-    //         let lc_rem = rem.coeffs[curr - other.degree() + 1];
-    //         let lead_term = lc_quo / lc_rem;
+        for k in (0..=self.degree() - other.degree()).rev() {
+            let qk = r_coeffs[k + other.degree()] / other.coeffs[other.degree()];
+            q_coeffs[k] = qk;
 
-    //         quo.coeffs.push(lead_term);
-    //         rem.coeffs = rem.coeffs[..curr - other.degree()].iter().map(|&c| c - lead_term * other.coeffs[0]).collect::<Vec<_>>();
-    //         curr -= other.degree();
-    //     }
-
-    //     (quo, rem)
-    // }
-
-    pub fn divide(&self, other: &Self) -> (Self, Self) {
-//         let mut quo = Polynomial::zero();
-//         let mut rem = self.clone();
-//         let mut curr = rem.degree();
-//
-//         while curr >= other.degree() {
-//             if rem.coeffs[curr] == 0 {
-//                 curr -= 1;
-//                 continue;
-//             }
-//             let lc_quo = rem.coeffs[curr];
-//             let lc_rem = if curr - other.degree() + 1 < rem.coeffs.len() {
-//                 rem.coeffs[curr - other.degree() + 1]
-//             } else {
-//                 0
-//             };
-//             let lead_term = lc_quo / lc_rem;
-//
-//             quo.coeffs.push(lead_term);
-//
-//             // Ensure we don't go out of bounds
-//             let start_index = curr.saturating_sub(other.degree());
-//             let end_index = curr + 1;
-//             let slice_len = end_index - start_index;
-//             let mut new_coeffs = vec![0; slice_len];
-//
-//             for i in 0..slice_len {
-//                 new_coeffs[i] = rem.coeffs[start_index + i] - lead_term * other.coeffs.get(i).unwrap_or(&0);
-//             }
-//
-//             rem.coeffs.truncate(start_index);
-//             rem.coeffs.extend(new_coeffs.into_iter());
-//
-//             curr -= other.degree();
-//         }
-//
-//         (quo, rem)
-        if other.is_zero() {
-        panic!("Cannot divide by zero");
-    }
-
-    let mut dividend = self.clone();
-    let mut quotient_coeffs = vec![0; self.degree() - other.degree() + 1];
-    let mut remainder = Polynomial::zero();
-
-    while dividend.degree() >= other.degree() {
-        let leading_term_dividend = dividend.coeffs.last().unwrap();
-        let leading_term_other = other.coeffs.last().unwrap();
-        let degree_diff = dividend.degree() - other.degree();
-
-        let quotient_term = leading_term_dividend / leading_term_other;
-        quotient_coeffs[degree_diff] = quotient_term;
-
-        let mut temp_other = other.clone();
-        temp_other.coeffs.insert(0, 0); // Shift left by degree_diff places
-        for _ in 0..degree_diff {
-            if!temp_other.coeffs.is_empty() {
-                temp_other.coeffs.remove(0);
-            } else {
-                break; // Prevent removal from an empty vector
+            for j in 0..=other.degree() {
+                r_coeffs[k + j] = r_coeffs[k + j] - qk * other.coeffs[j];
             }
         }
-        temp_other.coeffs[degree_diff] *= quotient_term;
 
-        dividend = dividend.subtract(&temp_other).clone();
+        (
+            Polynomial::new(q_coeffs),
+            Polynomial::new(r_coeffs[..other.degree()].to_vec()),
+        )
     }
-
-    remainder = dividend.clone();
-
-    (Polynomial { coeffs: quotient_coeffs }, remainder)
-    }
-    
 
     pub fn reduce_coeffs(&mut self, n: i64) -> &mut Self{
         for coeff in &mut self.coeffs {
@@ -297,7 +234,7 @@ impl Polynomial {
 
     pub fn modulus(&self, other: &Self) -> Self {
         println!("Divide used in modulus");
-        println!("Self: {:?}", self.coeffs.clone());
+        // println!("Self: {:?}", self.coeffs.clone());
         let (_, rem) = self.divide(other);
         rem
     }
@@ -315,7 +252,7 @@ impl Polynomial {
     }
 }
 
-fn ntruprime_inv_poly(a: &Polynomial, modulus: u16) -> Option<Polynomial> {
+fn ntruprime_inv_poly<T: Field>(a: &Polynomial<T>, modulus: u16) -> Option<Polynomial<T>> {
     let n = a.degree() + 1;
     let mut b = Polynomial::zero(); // Corresponds to NtruIntPoly *b
     b.coeffs[0] = 1;
@@ -403,7 +340,7 @@ fn modular_inverse(a: i64, m: i64) -> Option<i64> {
     }
 }
 
-pub fn poly_euclid_inv(f: &Polynomial, g: &Polynomial, n: i64) -> Polynomial {
+pub fn poly_euclid_inv<T: Field>(f: &Polynomial<T>, g: &Polynomial<T>, n: i64) -> Polynomial<T> {
     let mut x0 = Polynomial::one(); // Represents 1
     let mut x1 = Polynomial::zero();
     let mut y0 = Polynomial::zero();
@@ -432,27 +369,28 @@ pub fn poly_euclid_inv(f: &Polynomial, g: &Polynomial, n: i64) -> Polynomial {
     x0
 }
 
-pub struct Initializer {
-    pub p: i64,
-    pub q: i64,
-    pub N: i64,
-    pub df: i64,
-    pub dg: i64,
-    pub dr: i64,
-    pub f: Polynomial,
-    pub g: Polynomial,
-    pub h: Polynomial,
-    pub fp: Polynomial,
-    pub fq: Polynomial,
-    pub I: Polynomial,
-    pub r: Polynomial,
+pub struct Initializer<T: Field> {
+    pub p: T,
+    pub q: T,
+    pub N: T,
+    pub df: T,
+    pub dg: T,
+    pub dr: T,
+    pub f: Polynomial<T>,
+    pub g: Polynomial<T>,
+    pub h: Polynomial<T>,
+    pub fp: Polynomial<T>,
+    pub fq: Polynomial<T>,
+    pub I: Polynomial<T>,
+    pub r: Polynomial<T>,
     pub message: String,
     pub ciphertext: String,
-    pub cipherpoly: Polynomial,
+    pub cipherpoly: Polynomial<T>,
     pub output: String,
 }
 
-impl Initializer {
+
+impl<T: Field> Initializer<T>{
     pub fn new () -> Self {
         Initializer {
             p: 3,
@@ -618,17 +556,25 @@ impl Initializer {
         // let m_len = self.message.len();
         // println!("Message: {}", &self.message);
         let bM = pad_arr(&string_to_array(&self.message), self.N);
+        println!("bM done");
         // println!("bM: {:?}", bM);
         let m = Polynomial::new(bM);
         let mut binding = self.r.multiply(&self.h);
+        println!("r*h done");
         let rh = binding.reduce_coeffs(self.q);
+        println!("r*h reduced");
         // println!("h: {:?}", &self.h.coeffs.clone());
-        // println!("rh: {:?}", rh.coeffs.clone());
+        println!("rh: {:?}", rh.coeffs.clone());
         let mut binding = rh.add(&m);
+        println!("r*h + m done");
         let mut e = binding.reduce_coeffs(self.q);
+        println!("r*h + m reduced");
         let mut binding = e.modulus(&self.I);
+        println!("Modulus done");
         e = binding.reduce_coeffs(self.q);
+        println!("Modulus reduced");
         e.pad(self.N);
+        println!("Ciphertext: {:?}", e.coeffs.clone());
         // Add a space between each element in the array
         self.ciphertext = e.coeffs.clone().into_iter().map(|x| x.to_string()).collect::<Vec<String>>().join(" ");
         // println!("Ciphertext: {}", self.ciphertext.clone());
@@ -639,17 +585,17 @@ impl Initializer {
         // self.input = input;
         println!("Ciphertext in Decrypt: {}", input.clone());
         let c = Polynomial::new(string_to_array(&input.clone()));
-        println!("Ciphertext in Decrypt: {:?}", c.coeffs.clone());
+        println!("Cipherpoly in Decrypt: {:?}", c.coeffs.clone());
         let cf = c.modulus(&self.fq);
-        println!("Decrypted cf: {:?}", cf.coeffs.clone());
+        println!("Decrypt cf: {:?}", cf.coeffs.clone());
         let mut m = cf.multiply(&self.fp);
-        println!("Decrypted m: {:?}", m.coeffs.clone());
+        println!("Decrypt m: {:?}", m.coeffs.clone());
         let mut mf = m.reduce_coeffs(self.p.into());
-        println!("Decrypted mf: {:?}", mf.coeffs.clone());
+        println!("Decrypt mf: {:?}", mf.coeffs.clone());
         let mut binding = mf.modulus(&self.I);
         mf = binding.reduce_coeffs(self.p.into());
-        println!("Decrypted mf: {:?}", mf.coeffs.clone());
+        println!("Decrypt mf: {:?}", mf.coeffs.clone());
         self.output = bits_to_str(&mf.coeffs.clone().into_iter().map(|x| x as u8).collect::<Vec<u8>>());
-        println!("Decrypted: {}", self.output.clone());
+        println!("Decrypt: {}", self.output.clone());
     }
 }
