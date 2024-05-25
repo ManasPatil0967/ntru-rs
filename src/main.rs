@@ -1,4 +1,3 @@
-#![feature(specialization)]
 pub mod ntru_decrypt;
 pub mod ntru_util;
 pub mod ntru_encrypt;
@@ -6,8 +5,9 @@ pub mod ntru_encrypt;
 fn main() {
     println!("Hello, world!");
     let mut ntru_util = ntru_util::Initializer::new();
+    println!("N: {}", ntru_util.N);
     ntru_util.gen_keys();
-    let message = "0 1 0 0 0 1 0 0".to_string();
+    let message = "0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 1 0 1 1 0 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 0 1 0 0 1 0 1".to_string();
     ntru_util.message = message.clone();
     println!("Message: {}", ntru_util.message.clone());
     ntru_util.encrypt(message);

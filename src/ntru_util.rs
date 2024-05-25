@@ -1,5 +1,7 @@
 use std::{vec, fs, str::FromStr};
 use std::ops::{Add, Mul, Div, Sub, Neg};
+use std::fmt::Debug;
+use num::ToPrimitive as _;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 
@@ -112,64 +114,63 @@ fn extended_gcd(a: i64, b: i64) -> (i64, i64, i64) {
 
 
 // Trait for implementing field operations
-pub trait Field: Sized + Copy + Add<Output = Self> + Mul<Output = Self> + Div<Output = Self> + Sub<Output = Self> {
-    fn zero() -> Self;
-    fn one() -> Self;
-}
+// pub trait Field: Sized + Copy + Add<Output = Self> + Mul<Output = Self> + Div<Output = Self> + Sub<Output = Self> + Default + PartialEq + Neg<Output = Self> + Debug {
+//     fn zero() -> Self;
+//     fn one() -> Self;
+// }
 
-// Implementation for f64 as an example
-impl Field for i64 {
-    fn zero() -> Self { 0 }
-    fn one() -> Self { 1 }
-}
+// // Implementation for f64 as an example
+// impl Field for i64 {
+//     fn zero() -> Self { 0 }
+//     fn one() -> Self { 1 }
+// }
 
-impl<T> Field for T
-where
-    T: Copy + Add<Output = T> + Mul<Output = T> + Div<Output = T> + Sub<Output = T> + Default + PartialEq + Neg<Output = T> + From<i64> + From<u64> + From<usize> + std::fmt::Debug,
-{
-    fn zero() -> Self {
-        Self::default()
-    }
+// impl<T> Field for T
+// where
+//     T: Copy + Add<Output = T> + Mul<Output = T> + Div<Output = T> + Sub<Output = T> + Default + PartialEq + Neg<Output = T> + Debug,
+// {
+//     fn zero() -> Self {
+//         Self::default()
+//     }
 
-    fn one() -> Self {
-        // Provide a fallback implementation for `one`
-        let mut one = Self::default();
-        one = one + Self::default();
-        one
-    }
-}
+//     fn one() -> Self {
+//         let mut one = Self::default();
+//         one = one + Self::default();
+//         one
+//     }
+// }
 
-impl<T: Field> Initializer<T> {
-    pub fn gen_rand(&self, L: T, P: T, M: T) -> Polynomial<T> {
-        let mut R: Vec<T> = vec![T::zero(); L.to_usize().unwrap()];
-        let mut rng = thread_rng();
-        let zero = T::zero();
-        let one = T::one();
+// impl<T: Field> Initializer<T> {
+//     pub fn gen_rand2(&self, L: i64, P: i64, M: i64) -> Polynomial {
+//         let mut R: Vec<i64> = vec![0; L.to_usize().unwrap()];
+//         let mut rng = thread_rng();
+//         let zero = T::zero();
+//         let one = T::one();
 
-        for i in 0..L {
-            if i < P {
-                R[i.to_usize().unwrap()] = one;
-            } else if i < P + M {
-                R[i.to_usize().unwrap()] = -one;
-            } else {
-                break;
-            }
-        }
+//         for i in 0..L {
+//             if i < P {
+//                 R[i.to_usize().unwrap()] = one;
+//             } else if i < P + M {
+//                 R[i.to_usize().unwrap()] = -one;
+//             } else {
+//                 break;
+//             }
+//         }
 
-        let mut r_slice = R.as_mut_slice();
-        r_slice.shuffle(&mut rng);
-        Polynomial::new(R)
-    }
-}
+//         let mut r_slice = R.as_mut_slice();
+//         r_slice.shuffle(&mut rng);
+//         Polynomial::new(R)
+//     }
+// }
 
 
 #[derive(PartialEq)]
-pub struct Polynomial<T: Field> {
-    pub coeffs: Vec<T>, // Coefficients of the polynomial
+pub struct Polynomial {
+    pub coeffs: Vec<i64>, // Coefficients of the polynomial
 }
 
-impl<T: Field> Polynomial<T> {
-    pub fn new(coeffs: Vec<T>) -> Self {
+impl Polynomial {
+    pub fn new(coeffs: Vec<i64>) -> Self {
         Polynomial { coeffs }
     }
 
@@ -195,8 +196,8 @@ impl<T: Field> Polynomial<T> {
 
     pub fn create_I() -> Self {
         let mut I = vec![0; 108 as usize];
-        I[0] = -1;
-        I[107] = 1;
+        I[0] = 1;
+        I[107] = -1;
         Polynomial::new(I)
     }
 
@@ -243,8 +244,8 @@ impl<T: Field> Polynomial<T> {
         Polynomial { coeffs }
     }
 
-    pub fn divide<'a>(&'a self, other: &'a Polynomial<T>) -> (Polynomial<T>, Polynomial<T>) {
-        let mut q_coeffs = vec![T::zero(); self.degree() - other.degree() + 1];
+    pub fn divide<'a>(&'a self, other: &'a Self) -> (Self, Self) {
+        let mut q_coeffs = vec![0; self.degree() - other.degree() + 1];
         let mut r_coeffs = self.coeffs.clone();
 
         for k in (0..=self.degree() - other.degree()).rev() {
@@ -293,7 +294,7 @@ impl<T: Field> Polynomial<T> {
     }
 }
 
-fn ntruprime_inv_poly<T: Field>(a: &Polynomial<T>, modulus: u16) -> Option<Polynomial<T>> {
+fn ntruprime_inv_poly(a: &Polynomial, modulus: u16) -> Option<Polynomial> {
     let n = a.degree() + 1;
     let mut b = Polynomial::zero(); // Corresponds to NtruIntPoly *b
     b.coeffs[0] = 1;
@@ -381,7 +382,7 @@ fn modular_inverse(a: i64, m: i64) -> Option<i64> {
     }
 }
 
-pub fn poly_euclid_inv<T: Field>(f: &Polynomial<T>, g: &Polynomial<T>, n: i64) -> Polynomial<T> {
+pub fn poly_euclid_inv(f: &Polynomial, g: &Polynomial, n: i64) -> Polynomial {
     let mut x0 = Polynomial::one(); // Represents 1
     let mut x1 = Polynomial::zero();
     let mut y0 = Polynomial::zero();
@@ -410,28 +411,28 @@ pub fn poly_euclid_inv<T: Field>(f: &Polynomial<T>, g: &Polynomial<T>, n: i64) -
     x0
 }
 
-pub struct Initializer<T: Field> {
-    pub p: T,
-    pub q: T,
-    pub N: T,
-    pub df: T,
-    pub dg: T,
-    pub dr: T,
-    pub f: Polynomial<T>,
-    pub g: Polynomial<T>,
-    pub h: Polynomial<T>,
-    pub fp: Polynomial<T>,
-    pub fq: Polynomial<T>,
-    pub I: Polynomial<T>,
-    pub r: Polynomial<T>,
+pub struct Initializer {
+    pub p: i64,
+    pub q: i64,
+    pub N: i64,
+    pub df: i64,
+    pub dg: i64,
+    pub dr: i64,
+    pub f: Polynomial,
+    pub g: Polynomial,
+    pub h: Polynomial,
+    pub fp: Polynomial,
+    pub fq: Polynomial,
+    pub I: Polynomial,
+    pub r: Polynomial,
     pub message: String,
     pub ciphertext: String,
-    pub cipherpoly: Polynomial<T>,
+    pub cipherpoly: Polynomial,
     pub output: String,
 }
 
 
-impl<T: Field> Initializer<T>{
+impl Initializer {
     pub fn new () -> Self {
         Initializer {
             p: 3,
@@ -454,6 +455,24 @@ impl<T: Field> Initializer<T>{
         }
     }
 
+    pub fn gen_rand(&self, L: i64, P: i64, M: i64) -> Polynomial {
+        let mut R: Vec<i64> = vec![0; L.to_usize().unwrap()];
+        let mut rng = thread_rng();
+
+        for i in 0..L {
+            if i < P {
+                R[i.to_usize().unwrap()] = 1;
+            } else if i < P + M {
+                R[i.to_usize().unwrap()] = -1;
+            } else {
+                break;
+            }
+        }
+
+        let mut r_slice = R.as_mut_slice();
+        r_slice.shuffle(&mut rng);
+        Polynomial::new(R)
+    }
     pub fn gen_fg(&mut self) {
         let mut max_tries = 100;
         self.f = self.gen_rand(self.N, self.df, self.df - 1);
@@ -594,10 +613,12 @@ impl<T: Field> Initializer<T>{
     pub fn encrypt(&mut self, message: String) {
         self.message = message;
         self.gen_r();
+        println!("r: {:?}", self.r.coeffs.clone());
         // let m_len = self.message.len();
         // println!("Message: {}", &self.message);
+        println!("I: {:?}", self.I.coeffs.clone());
         let bM = pad_arr(&string_to_array(&self.message), self.N);
-        println!("bM done");
+        println!("bM done: {:?}", bM);
         // println!("bM: {:?}", bM);
         let m = Polynomial::new(bM);
         let mut binding = self.r.multiply(&self.h);
@@ -606,14 +627,18 @@ impl<T: Field> Initializer<T>{
         println!("r*h reduced");
         // println!("h: {:?}", &self.h.coeffs.clone());
         println!("rh: {:?}", rh.coeffs.clone());
+        println!("m: {:?}", m.coeffs.clone());
+        // let m_i = m.multiply(&self.I);
+        // println!("m*I done: {:?}", m_i.coeffs.clone());    
         let mut binding = rh.add(&m);
         println!("r*h + m done");
-        let mut e = binding.reduce_coeffs(self.q);
+        binding = binding.modulus(&self.I);
+        let e = binding.reduce_coeffs(self.q);
         println!("r*h + m reduced");
-        let mut binding = e.modulus(&self.I);
-        println!("Modulus done");
-        e = binding.reduce_coeffs(self.q);
-        println!("Modulus reduced");
+        // let mut binding = e.modulus(&self.I);
+        // println!("Modulus done");
+        // e = binding.reduce_coeffs(self.q);
+        // println!("Modulus reduced");
         e.pad(self.N);
         println!("Ciphertext: {:?}", e.coeffs.clone());
         // Add a space between each element in the array
@@ -623,20 +648,19 @@ impl<T: Field> Initializer<T>{
     }
 
     pub fn decrypt(&mut self, input: String) {
-        // self.input = input;
-        println!("Ciphertext in Decrypt: {}", input.clone());
-        let c = Polynomial::new(string_to_array(&input.clone()));
-        println!("Cipherpoly in Decrypt: {:?}", c.coeffs.clone());
-        let cf = c.modulus(&self.fq);
-        println!("Decrypt cf: {:?}", cf.coeffs.clone());
-        let mut m = cf.multiply(&self.fp);
-        println!("Decrypt m: {:?}", m.coeffs.clone());
-        let mut mf = m.reduce_coeffs(self.p.into());
-        println!("Decrypt mf: {:?}", mf.coeffs.clone());
-        let mut binding = mf.modulus(&self.I);
-        mf = binding.reduce_coeffs(self.p.into());
-        println!("Decrypt mf: {:?}", mf.coeffs.clone());
-        self.output = bits_to_str(&mf.coeffs.clone().into_iter().map(|x| x as u8).collect::<Vec<u8>>());
-        println!("Decrypt: {}", self.output.clone());
+        self.ciphertext = input;
+        println!("Ciphertext in Decrypt: {}", self.ciphertext.clone());
+        let c = Polynomial::new(string_to_array(&self.ciphertext));
+        println!("Ciphertext in Decrypt: {:?}", c.coeffs.clone());
+        let cf = c.multiply(&self.f);
+        let mut cf_modI = cf.modulus(&self.I);
+        let a = cf_modI.reduce_coeffs(self.q);
+        let b = a.reduce_coeffs(self.p);
+        let binding = b.multiply(&self.fp);
+        let mut m = binding.modulus(&self.I);
+        let ans = m.reduce_coeffs(self.p);
+        println!("Decrypted: {:?}", ans.coeffs.clone());
+        self.output = bits_to_str(&ans.coeffs.clone().into_iter().map(|x| x as u8).collect::<Vec<u8>>());
+        // println!("Decrypted: {}", self.output.clone());
     }
 }
