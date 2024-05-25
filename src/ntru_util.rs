@@ -1,6 +1,7 @@
 use std::{vec, fs, str::FromStr};
-use std::ops::{Add, Mul, Div, Sub};
+use std::ops::{Add, Mul, Div, Sub, Neg};
 use rand::seq::SliceRandom;
+use rand::thread_rng;
 
 pub fn check_prime(n: i64) -> bool {
     if n <= 1 {
@@ -72,23 +73,23 @@ pub fn bits_to_str(bits: &Vec<u8>) -> String {
     s
 }
 
-pub fn gen_rand(L: i64, P: i64, M: i64) -> Polynomial {
-    let mut R: Vec<i64> = vec![0; L as usize];
-    let mut rng = rand::thread_rng();
-    for i in 0..L {
-        if i < P {
-            R[i as usize] = 1;
-        } else if i < P + M {
-            R[i as usize] = -1;
-        }
-        else {
-            break;
-        }
-    }
-    let mut r_slice = R.as_mut_slice();
-    (&mut r_slice).shuffle(&mut rng);
-    Polynomial::new(R)
-}
+// pub fn gen_rand(L: i64, P: i64, M: i64) -> Polynomial {
+//     let mut R: Vec<i64> = vec![0; L as usize];
+//     let mut rng = rand::thread_rng();
+//     for i in 0..L {
+//         if i < P {
+//             R[i as usize] = 1;
+//         } else if i < P + M {
+//             R[i as usize] = -1;
+//         }
+//         else {
+//             break;
+//         }
+//     }
+//     let mut r_slice = R.as_mut_slice();
+//     (&mut r_slice).shuffle(&mut rng);
+//     Polynomial::new(R)
+// }
 
 pub fn pad_arr(arr: &Vec<i64>, N: i64) -> Vec<i64> {
     // Pad the array with 0s to make it of length N
@@ -121,6 +122,46 @@ impl Field for i64 {
     fn zero() -> Self { 0 }
     fn one() -> Self { 1 }
 }
+
+impl<T> Field for T
+where
+    T: Copy + Add<Output = T> + Mul<Output = T> + Div<Output = T> + Sub<Output = T> + Default + PartialEq + Neg<Output = T> + From<i64> + From<u64> + From<usize> + std::fmt::Debug,
+{
+    fn zero() -> Self {
+        Self::default()
+    }
+
+    fn one() -> Self {
+        // Provide a fallback implementation for `one`
+        let mut one = Self::default();
+        one = one + Self::default();
+        one
+    }
+}
+
+impl<T: Field> Initializer<T> {
+    pub fn gen_rand(&self, L: T, P: T, M: T) -> Polynomial<T> {
+        let mut R: Vec<T> = vec![T::zero(); L.to_usize().unwrap()];
+        let mut rng = thread_rng();
+        let zero = T::zero();
+        let one = T::one();
+
+        for i in 0..L {
+            if i < P {
+                R[i.to_usize().unwrap()] = one;
+            } else if i < P + M {
+                R[i.to_usize().unwrap()] = -one;
+            } else {
+                break;
+            }
+        }
+
+        let mut r_slice = R.as_mut_slice();
+        r_slice.shuffle(&mut rng);
+        Polynomial::new(R)
+    }
+}
+
 
 #[derive(PartialEq)]
 pub struct Polynomial<T: Field> {
@@ -415,8 +456,8 @@ impl<T: Field> Initializer<T>{
 
     pub fn gen_fg(&mut self) {
         let mut max_tries = 100;
-        self.f = gen_rand(self.N, self.df, self.df - 1);
-        self.g = gen_rand(self.N, self.dg, self.dg);
+        self.f = self.gen_rand(self.N, self.df, self.df - 1);
+        self.g = self.gen_rand(self.N, self.dg, self.dg);
         let zero = Polynomial::new(vec![0; self.N as usize]);
     
         while max_tries > 0 {
@@ -546,7 +587,7 @@ impl<T: Field> Initializer<T>{
     }
 
     pub fn gen_r(&mut self) {
-        self.r = gen_rand(self.N, self.dr, self.dr);
+        self.r = self.gen_rand(self.N, self.dr, self.dr);
         // println!("r: {:?}", self.r.coeffs.clone());
     }
 
