@@ -1,6 +1,4 @@
 use std::{vec, fs, str::FromStr};
-use std::ops::{Add, Mul, Div, Sub, Neg};
-use std::fmt::Debug;
 use num::ToPrimitive as _;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
@@ -64,34 +62,34 @@ pub fn str_to_bits(s: &str) -> Vec<i64> {
 }
 
 pub fn bits_to_str(bits: &Vec<u8>) -> String {
-    let mut s = String::new();
-    for i in 0..bits.len() / 8 {
-        let mut b = 0;
-        for j in 0..8 {
-            b |= bits[i * 8 + j] << j;
-        }
-        s.push(b as char);
+    let mut bits = bits.clone();
+    while bits.len() % 8 != 0 {
+        bits.insert(0, 0);
     }
-    s
+    let mut s = String::new();
+    for chunk in bits.chunks(8) {
+        let byte = chunk.iter()
+                        .rev()
+                        .enumerate()
+                        .map(|(i, b)| (*b as u8) << i)
+                        .sum::<u8>();
+        s.push(byte as char);
+    }
+    s.chars().collect()
 }
 
-// pub fn gen_rand(L: i64, P: i64, M: i64) -> Polynomial {
-//     let mut R: Vec<i64> = vec![0; L as usize];
-//     let mut rng = rand::thread_rng();
-//     for i in 0..L {
-//         if i < P {
-//             R[i as usize] = 1;
-//         } else if i < P + M {
-//             R[i as usize] = -1;
-//         }
-//         else {
-//             break;
-//         }
-//     }
-//     let mut r_slice = R.as_mut_slice();
-//     (&mut r_slice).shuffle(&mut rng);
-//     Polynomial::new(R)
-// }
+pub fn rem(vec: &mut Vec<i64>) {
+    let mut index = 0;
+    // Find the first non-zero element
+    for (i, &value) in vec.iter().enumerate() {
+        if value!= 0 {
+            index = i;
+            break;
+        }
+    }
+    // Remove elements up to the found index
+    vec.drain(..index);
+}
 
 pub fn pad_arr(arr: &Vec<i64>, N: i64) -> Vec<i64> {
     // Pad the array with 0s to make it of length N
@@ -103,70 +101,9 @@ pub fn pad_arr(arr: &Vec<i64>, N: i64) -> Vec<i64> {
     padded
 }
 
-fn extended_gcd(a: i64, b: i64) -> (i64, i64, i64) {
-    if a == 0 {
-        (b, 0, 1)
-    } else {
-        let (gcd, x, y) = extended_gcd(b % a, a);
-        (gcd, y - (b / a) * x, x)
-    }
-}
-
-
-// Trait for implementing field operations
-// pub trait Field: Sized + Copy + Add<Output = Self> + Mul<Output = Self> + Div<Output = Self> + Sub<Output = Self> + Default + PartialEq + Neg<Output = Self> + Debug {
-//     fn zero() -> Self;
-//     fn one() -> Self;
-// }
-
-// // Implementation for f64 as an example
-// impl Field for i64 {
-//     fn zero() -> Self { 0 }
-//     fn one() -> Self { 1 }
-// }
-
-// impl<T> Field for T
-// where
-//     T: Copy + Add<Output = T> + Mul<Output = T> + Div<Output = T> + Sub<Output = T> + Default + PartialEq + Neg<Output = T> + Debug,
-// {
-//     fn zero() -> Self {
-//         Self::default()
-//     }
-
-//     fn one() -> Self {
-//         let mut one = Self::default();
-//         one = one + Self::default();
-//         one
-//     }
-// }
-
-// impl<T: Field> Initializer<T> {
-//     pub fn gen_rand2(&self, L: i64, P: i64, M: i64) -> Polynomial {
-//         let mut R: Vec<i64> = vec![0; L.to_usize().unwrap()];
-//         let mut rng = thread_rng();
-//         let zero = T::zero();
-//         let one = T::one();
-
-//         for i in 0..L {
-//             if i < P {
-//                 R[i.to_usize().unwrap()] = one;
-//             } else if i < P + M {
-//                 R[i.to_usize().unwrap()] = -one;
-//             } else {
-//                 break;
-//             }
-//         }
-
-//         let mut r_slice = R.as_mut_slice();
-//         r_slice.shuffle(&mut rng);
-//         Polynomial::new(R)
-//     }
-// }
-
-
 #[derive(PartialEq)]
 pub struct Polynomial {
-    pub coeffs: Vec<i64>, // Coefficients of the polynomial
+    pub coeffs: Vec<i64>,
 }
 
 impl Polynomial {
@@ -213,7 +150,9 @@ impl Polynomial {
             coeffs[i] += coeff;
         }
     
-        Polynomial { coeffs }
+        let mut z = Polynomial { coeffs };
+        rem(&mut z.coeffs);
+        z
     }
 
     pub fn subtract(&self, other: &Self) -> Self {
@@ -228,7 +167,9 @@ impl Polynomial {
             coeffs[i] -= coeff;
         }
     
-        Polynomial { coeffs }
+        let mut z = Polynomial { coeffs };
+        rem(&mut z.coeffs);
+        z
     }
 
     pub fn multiply(&self, other: &Self) -> Self {
@@ -241,7 +182,9 @@ impl Polynomial {
             }
         }
     
-        Polynomial { coeffs }
+        let mut z = Polynomial { coeffs };
+        rem(&mut z.coeffs);
+        z
     }
 
     pub fn divide<'a>(&'a self, other: &'a Self) -> (Self, Self) {
@@ -266,7 +209,16 @@ impl Polynomial {
     pub fn reduce_coeffs(&mut self, n: i64) -> &mut Self{
         for coeff in &mut self.coeffs {
             *coeff %= n;
+            if *coeff > n/2 {
+                *coeff -= n;
+            }
+            if *coeff < -n/2 {
+                *coeff += n;
+            }
         }
+        let mut z = Polynomial { coeffs: self.coeffs.clone() };
+        rem(&mut z.coeffs);
+        self.coeffs = z.coeffs.clone();
         self
     }
 
@@ -277,13 +229,15 @@ impl Polynomial {
     pub fn modulus(&self, other: &Self) -> Self {
         println!("Divide used in modulus");
         // println!("Self: {:?}", self.coeffs.clone());
-        let (_, rem) = self.divide(other);
+        let (_, mut rem) = self.divide(other);
         rem
     }
 
     pub fn multiply_scalar(&self, scalar: i64) -> Self {
         let coeffs = self.coeffs.iter().map(|&c| c * scalar).collect();
-        Polynomial { coeffs }
+        let mut z = Polynomial { coeffs };
+        rem(&mut z.coeffs);
+        z
     }
 
     pub fn pad(&mut self, N: i64) -> &mut Self{
@@ -428,6 +382,7 @@ pub struct Initializer {
     pub message: String,
     pub ciphertext: String,
     pub cipherpoly: Polynomial,
+    pub outputpoly: Polynomial,
     pub output: String,
 }
 
@@ -451,6 +406,7 @@ impl Initializer {
             message: String::new(),
             ciphertext: String::new(),
             cipherpoly: Polynomial::new(vec![0; 107 as usize]),
+            outputpoly: Polynomial::new(vec![0; 107 as usize]),
             output: String::new(),
         }
     }
@@ -469,7 +425,7 @@ impl Initializer {
             }
         }
 
-        let mut r_slice = R.as_mut_slice();
+        let r_slice = R.as_mut_slice();
         r_slice.shuffle(&mut rng);
         Polynomial::new(R)
     }
@@ -531,22 +487,17 @@ impl Initializer {
 
         let lines: Vec<&str> = contents.lines().collect();
 
-        // Assuming the first four lines contain the values p, q, N, and d
         self.p = i64::from_str(lines[0].split_whitespace().last().unwrap()).unwrap();
         self.q = i64::from_str(lines[1].split_whitespace().last().unwrap()).unwrap();
         self.N = i64::from_str(lines[2].split_whitespace().last().unwrap()).unwrap();
         self.dr = i64::from_str(lines[3].split_whitespace().last().unwrap()).unwrap();
 
-        // Parsing the coefficients of h
-        // let h_coeffs_line: &str = lines[4];
         let h_coeffs: Vec<i64> = lines[4]
             .split_whitespace()
             .skip(2)
             .map(|x| i64::from_str(x).unwrap()).collect();
 
         self.h.coeffs = h_coeffs;
-
-        // println!("h: {:?}", self.h.coeffs);
 
         Ok(())
     }
@@ -580,18 +531,11 @@ impl Initializer {
         self.fp.coeffs = lines[8].split_whitespace().map(|x| i64::from_str(x).unwrap()).collect();
         self.fq.coeffs = lines[9].split_whitespace().map(|x| i64::from_str(x).unwrap()).collect();
         self.g.coeffs = lines[10].split_whitespace().map(|x| i64::from_str(x).unwrap()).collect();
-        // println!("f: {:?}", self.f.coeffs);
-        // println!("fp: {:?}", self.fp.coeffs);
-        // println!("fq: {:?}", self.fq.coeffs);
-        // println!("g: {:?}", self.g.coeffs);
         Ok(())
     }
 
     pub fn gen_keys(&mut self) {
-        // If pubkey.pub and privley.priv exist, then use read_pubkey and read_privkey
-        // Otherwise, use write_pubkey and write_privkey
         if std::path::Path::new("pubkey.pub").exists() && std::path::Path::new("privkey.priv").exists() {
-            // println!("Reading keys from files");
             self.read_pubkey("pubkey").unwrap();
             self.read_privkey("privkey").unwrap();
         }
@@ -607,7 +551,6 @@ impl Initializer {
 
     pub fn gen_r(&mut self) {
         self.r = self.gen_rand(self.N, self.dr, self.dr);
-        // println!("r: {:?}", self.r.coeffs.clone());
     }
 
     pub fn encrypt(&mut self, message: String) {
@@ -617,50 +560,60 @@ impl Initializer {
         // let m_len = self.message.len();
         // println!("Message: {}", &self.message);
         println!("I: {:?}", self.I.coeffs.clone());
-        let bM = pad_arr(&string_to_array(&self.message), self.N);
+        let bM = string_to_array(&self.message);
         println!("bM done: {:?}", bM);
         // println!("bM: {:?}", bM);
         let m = Polynomial::new(bM);
+        println!("r: {:?}", (self.r.coeffs.clone()));
         let mut binding = self.r.multiply(&self.h);
-        println!("r*h done");
+        println!("r*h: {:?}", binding.coeffs.clone());
         let rh = binding.reduce_coeffs(self.q);
         println!("r*h reduced");
-        // println!("h: {:?}", &self.h.coeffs.clone());
-        println!("rh: {:?}", rh.coeffs.clone());
-        println!("m: {:?}", m.coeffs.clone());
-        // let m_i = m.multiply(&self.I);
-        // println!("m*I done: {:?}", m_i.coeffs.clone());    
+        println!("rh_trunc q: {:?}", rh.coeffs.clone());
+        println!("m: {:?}", m.coeffs.clone()); 
         let mut binding = rh.add(&m);
         println!("r*h + m done");
         binding = binding.modulus(&self.I);
+        // binding.coeffs.rotate_left(2);
         let e = binding.reduce_coeffs(self.q);
         println!("r*h + m reduced");
-        // let mut binding = e.modulus(&self.I);
-        // println!("Modulus done");
-        // e = binding.reduce_coeffs(self.q);
-        // println!("Modulus reduced");
-        e.pad(self.N);
-        println!("Ciphertext: {:?}", e.coeffs.clone());
-        // Add a space between each element in the array
+        // e.pad(self.N);
+        // println!("Ciphertext: {:?}", e.coeffs.clone());
         self.ciphertext = e.coeffs.clone().into_iter().map(|x| x.to_string()).collect::<Vec<String>>().join(" ");
-        // println!("Ciphertext: {}", self.ciphertext.clone());
+        println!("Ciphertext: {}", self.ciphertext.clone());
         self.cipherpoly = e.clone();
     }
 
     pub fn decrypt(&mut self, input: String) {
         self.ciphertext = input;
-        println!("Ciphertext in Decrypt: {}", self.ciphertext.clone());
+        // println!("Ciphertext in Decrypt: {}", self.ciphertext.clone());
         let c = Polynomial::new(string_to_array(&self.ciphertext));
-        println!("Ciphertext in Decrypt: {:?}", c.coeffs.clone());
-        let cf = c.multiply(&self.f);
-        let mut cf_modI = cf.modulus(&self.I);
-        let a = cf_modI.reduce_coeffs(self.q);
+        println!("Ciphertext coeffs: {:?}", c.coeffs.clone());
+        println!("f coeffs: {:?}", self.f.coeffs.clone());
+        let fc = &self.f.multiply(&c);
+        println!("fc coeffs: {:?}", fc.coeffs.clone());
+        println!("fc len: {:?}", fc.coeffs.len());
+        let mut fc_modI = fc.modulus(&self.I);
+        fc_modI.coeffs.rotate_right(2);
+        println!("fc_modI coeffs: {:?}", fc_modI.coeffs.clone());
+        println!("fc_modI len: {:?}", fc_modI.coeffs.len());
+        let a = fc_modI.reduce_coeffs(self.q);
+        println!("a coeffs: {:?}", a.coeffs.clone());
         let b = a.reduce_coeffs(self.p);
-        let binding = b.multiply(&self.fp);
+        println!("b coeffs: {:?}", b.coeffs.clone());
+        let binding = &self.fp.multiply(&b);
+        println!("fp*b: {:?}", binding.coeffs.clone());
+        println!("fp*b len: {:?}", binding.coeffs.len());
         let mut m = binding.modulus(&self.I);
+        m.coeffs.rotate_right(1);
+        println!("fp*b mod I: {:?}", m.coeffs.clone());
+        println!("fp*b mod I len: {:?}", m.coeffs.len());
+        
         let ans = m.reduce_coeffs(self.p);
         println!("Decrypted: {:?}", ans.coeffs.clone());
         self.output = bits_to_str(&ans.coeffs.clone().into_iter().map(|x| x as u8).collect::<Vec<u8>>());
-        // println!("Decrypted: {}", self.output.clone());
+        let outputvec = ans.coeffs.clone().into_iter().map(|x| x as i64).collect::<Vec<i64>>();
+        self.outputpoly = Polynomial { coeffs: outputvec };
+        println!("Decrypted: {:?}", self.output.clone());
     }
 }
