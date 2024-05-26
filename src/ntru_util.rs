@@ -133,10 +133,10 @@ impl Polynomial {
         Polynomial { coeffs: self.coeffs.clone() }
     }
 
-    pub fn create_I(n: i64) -> Self {
-        let mut I = vec![0; n as usize];
+    pub fn create_i() -> Self {
+        let mut I = vec![0; 108 as usize];
         I[0] = 1;
-        I[n as usize - 1] = -1;
+        I[107] = -1;
         Polynomial::new(I)
     }
 
@@ -258,7 +258,7 @@ fn ntruprime_inv_poly(a: &Polynomial, modulus: u16) -> Option<Polynomial> {
     let mut f = a.clone(); // Corresponds to NtruIntPoly *f
     f.pad(n as i64); // Ensure f has enough coefficients
 
-    let mut g = Polynomial::create_I(108); // Corresponds to NtruIntPoly *g
+    let mut g = Polynomial::create_i(); // Corresponds to NtruIntPoly *g
     g.coeffs[0] = modulus as i64 - 1;
     g.coeffs[1] = modulus as i64 - 1;
 
@@ -409,7 +409,7 @@ impl Initializer {
             h: Polynomial::new(vec![0; 107 as usize]),
             fp: Polynomial::new(vec![0; 107 as usize]),
             fq: Polynomial::new(vec![0; 107 as usize]),
-            I: Polynomial::create_I(108),
+            I: Polynomial::create_i(),
             r: Polynomial::new(vec![0; 107 as usize]),
             message: String::new(),
             ciphertext: String::new(),
