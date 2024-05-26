@@ -52,7 +52,7 @@ impl NtruDecrypt {
         let mut binding = mf.modulus(&self.I);
         mf = binding.reduce_coeffs(self.p.into());
         println!("Decrypted mf: {:?}", mf.coeffs.clone());
-        self.output = bits_to_str(&mf.coeffs.clone().into_iter().map(|x| x as u8).collect::<Vec<u8>>());
+        self.output = bits_to_str(&mf.coeffs.clone().into_iter().map(|x| x as u8).collect::<Vec<u8>>());        
         println!("Decrypted: {}", self.output.clone());
     }
 
